@@ -62,8 +62,10 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
     };
 
-    if (newStatus === ComplaintStatus.RESOLVED && remarks) {
-      updateData.resolution_notes = remarks;
+    // resolution_notes is shown publicly, so only the officer's public note goes there;
+    // internal remarks stay in complaint_updates.notes, which the tracker never returns.
+    if (newStatus === ComplaintStatus.RESOLVED) {
+      updateData.resolution_notes = public_note?.trim() || null;
     }
 
     const { error: updateError } = await supabaseAdmin

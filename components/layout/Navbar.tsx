@@ -49,7 +49,7 @@ export default function Navbar() {
                 NyayaSetu
               </span>
               <span className="text-[10px] font-medium tracking-wide uppercase text-slate-500">
-                Civic Services Prototype for Delhi
+                Civic issue tracker · India
               </span>
             </div>
           </Link>

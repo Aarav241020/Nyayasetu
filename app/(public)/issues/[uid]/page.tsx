@@ -54,7 +54,7 @@ export default function IssuePage({ params }: { params: { uid: string } }) {
     });
     const d = await res.json();
     setConfirming(false);
-    setConfirmMsg(d.success ? `Thanks! ${d.confirmations} people have now confirmed this issue.` : d.message);
+    setConfirmMsg(d.success ? `Thanks! ${d.confirmations === 1 ? '1 person has' : `${d.confirmations} people have`} now confirmed this issue.` : d.message);
     if (d.success) load();
   }, [params.uid, load]);
 
@@ -170,7 +170,7 @@ export default function IssuePage({ params }: { params: { uid: string } }) {
               <SLACountdown sla_deadline={c.sla_deadline} status={c.status as ComplaintStatus} />
               <p className="flex items-center gap-2 text-gray-700"><Building2 className="w-4 h-4 text-gray-400" /> {data.department_name ?? 'Department pending'}</p>
               <p className="flex items-center gap-2 text-gray-700"><User className="w-4 h-4 text-gray-400" /> {data.officer_name ?? 'Officer not assigned yet'}</p>
-              <p className="flex items-center gap-2 text-gray-700"><ThumbsUp className="w-4 h-4 text-gray-400" /> {c.confirmations} people confirmed this</p>
+              <p className="flex items-center gap-2 text-gray-700"><ThumbsUp className="w-4 h-4 text-gray-400" /> {c.confirmations === 1 ? '1 person' : `${c.confirmations} people`} confirmed this</p>
             </div>
 
             {!done && (

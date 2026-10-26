@@ -74,7 +74,7 @@ export default function LandingPage() {
                       <span className="w-5 text-xs tabular-nums text-gray-400">{idx + 1}</span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-medium text-gray-900 truncate">{i.title}</span>
-                        <span className="block text-xs text-gray-500">{i.city ?? ''}{i.confirmations ? ` · ${i.confirmations} confirmations` : ''}</span>
+                        <span className="block text-xs text-gray-500">{i.city ?? ''}{i.confirmations ? ` · ${i.confirmations} confirmation${i.confirmations === 1 ? '' : 's'}` : ''}</span>
                       </span>
                       <PriorityBadge band={i.priority_band} score={i.priority_score} />
                     </Link>

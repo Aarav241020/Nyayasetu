@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { BAND_STYLE } from '@/components/priority/PriorityBreakdown';
 import type { PriorityBand } from '@/types';
@@ -19,6 +20,16 @@ export interface MapIssue {
 
 const DONE = new Set(['resolved', 'closed']);
 
+/** With no explicit view, frame all pins once they arrive. */
+function FitToPins({ issues }: { issues: MapIssue[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!issues.length) return;
+    map.fitBounds(issues.map((i) => [i.latitude, i.longitude] as [number, number]), { padding: [30, 30], maxZoom: 14 });
+  }, [issues, map]);
+  return null;
+}
+
 /** Pins coloured by priority band; resolved issues are hollow and grey. */
 export default function IssuesMap({ issues, center, zoom = 5, height = 'h-[520px]' }: {
   issues: MapIssue[];
@@ -27,8 +38,9 @@ export default function IssuesMap({ issues, center, zoom = 5, height = 'h-[520px
   height?: string;
 }) {
   return (
-    <MapContainer center={center ?? [23.5, 78.5]} zoom={zoom} className={`${height} w-full rounded-xl border border-slate-200 z-0`} scrollWheelZoom>
+    <MapContainer center={center ?? [23.5, 78.5]} zoom={zoom} className={`${height} w-full rounded-xl border border-slate-200 z-0`} scrollWheelZoom={false}>
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      {!center && <FitToPins issues={issues} />}
       {issues.map((i) => {
         const done = DONE.has(i.status);
         const color = done ? '#94a3b8' : (BAND_STYLE[i.priority_band] ?? BAND_STYLE.P4).hex;

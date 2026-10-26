@@ -23,7 +23,7 @@ const ICONS: Record<PriorityFactor['key'], React.ElementType> = {
 export function PriorityBadge({ band, score }: { band: PriorityBand; score?: number }) {
   const s = BAND_STYLE[band] ?? BAND_STYLE.P4;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${s.pill}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold whitespace-nowrap shrink-0 ${s.pill}`}>
       <span className="w-2 h-2 rounded-full" style={{ background: s.hex }} aria-hidden />
       {band} · {s.label}
       {score !== undefined && <span className="font-normal opacity-80">({score})</span>}

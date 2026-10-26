@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof NextResponse) return authResult;
 
   try {
-    // Get all officers
+    // Two queries in total (officers with department names, then all their complaints), grouped here.
     const { data: officers, error: offErr } = await supabaseAdmin
       .from('users')
-      .select('id, full_name, department_id')
+      .select('id, full_name, department_id, department:departments(name)')
       .eq('role', 'officer');
 
     if (offErr) {
@@ -20,26 +20,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Failed to fetch officers.' }, { status: 500 });
     }
 
+    const ids = (officers ?? []).map((o) => o.id);
+    const { data: allComplaints } = ids.length
+      ? await supabaseAdmin
+          .from('complaints')
+          .select('assigned_officer_id, status, sla_deadline, created_at, updated_at')
+          .in('assigned_officer_id', ids)
+      : { data: [] };
+    const byOfficer = new Map<string, NonNullable<typeof allComplaints>>();
+    for (const c of allComplaints ?? []) byOfficer.set(c.assigned_officer_id, [...(byOfficer.get(c.assigned_officer_id) ?? []), c]);
+
     const now = new Date().toISOString();
     const results: OfficerPerformance[] = [];
 
     for (const officer of officers || []) {
-      // Get user name
-
-      // Get department name
-      const { data: dept } = await supabaseAdmin
-        .from('departments')
-        .select('name')
-        .eq('id', officer.department_id)
-        .single();
-
-      // Get complaints for this officer
-      const { data: complaints } = await supabaseAdmin
-        .from('complaints')
-        .select('id, status, sla_deadline, created_at, updated_at')
-        .eq('assigned_officer_id', officer.id);
-
-      const all = complaints || [];
+      const dept = officer.department as unknown as { name: string } | null;
+      const all = byOfficer.get(officer.id) ?? [];
       const assigned = all.length;
       const resolved = all.filter((c) => c.status === 'resolved' || c.status === 'closed').length;
       const overdue = all.filter((c) =>

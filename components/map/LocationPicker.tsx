@@ -37,7 +37,7 @@ export default function LocationPicker({ value, onChange }: { value: LatLng | nu
       center={value ? [value.lat, value.lng] : [INDIA_CENTER.lat, INDIA_CENTER.lng]}
       zoom={value ? 17 : 5}
       className="h-72 w-full rounded-lg border border-gray-300 z-0"
-      scrollWheelZoom
+      scrollWheelZoom={false}
     >
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <ClickToPlace onChange={onChange} />

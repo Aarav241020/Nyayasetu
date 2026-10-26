@@ -8,6 +8,7 @@ import { PriorityBadge, BAND_STYLE } from '@/components/priority/PriorityBreakdo
 import { COMPLAINT_CATEGORIES } from '@/constants/categories';
 import type { MapIssue } from '@/components/map/IssuesMap';
 import type { PriorityBand } from '@/types';
+import { distanceM } from '@/lib/priority';
 
 const IssuesMap = dynamic(() => import('@/components/map/IssuesMap'), {
   ssr: false,
@@ -21,10 +22,11 @@ interface Issue extends MapIssue {
   created_at: string;
 }
 
-const CITY_VIEWS: Record<string, { center: [number, number]; zoom: number }> = {
-  '': { center: [23.5, 78.5], zoom: 5 },
-  Delhi: { center: [28.62, 77.21], zoom: 11 },
-  Neemrana: { center: [27.98, 76.39], zoom: 13 },
+// Areas are a centre + radius, so nearby villages count too whatever the address lookup calls them.
+const CITY_VIEWS: Record<string, { center: [number, number]; zoom: number; radiusKm: number }> = {
+  '': { center: [23.5, 78.5], zoom: 5, radiusKm: Infinity },
+  Delhi: { center: [28.62, 77.21], zoom: 11, radiusKm: 30 },
+  Neemrana: { center: [27.97, 76.39], zoom: 13, radiusKm: 12 },
 };
 
 const label = (cat: string) => COMPLAINT_CATEGORIES.find((c) => c.value === cat)?.label_en ?? cat;
@@ -42,7 +44,10 @@ export default function IssuesPage() {
   }, [status, category]);
 
   const shown = useMemo(
-    () => (issues ?? []).filter((i) => !city || (i.city ?? '').toLowerCase().includes(city.toLowerCase())),
+    () => {
+      const v = CITY_VIEWS[city] ?? CITY_VIEWS[''];
+      return (issues ?? []).filter((i) => !city || distanceM(v.center[0], v.center[1], i.latitude, i.longitude) <= v.radiusKm * 1000);
+    },
     [issues, city],
   );
   const counts = useMemo(() => {

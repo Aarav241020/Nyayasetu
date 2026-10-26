@@ -41,7 +41,10 @@ async function viaPhoton(lat: number, lon: number): Promise<GeoContext> {
   const found: string[][] = [];
   for (const g of Object.values(GROUPS)) found.push(await photonNames(lat, lon, g.radiusKm, g.tags));
   const [hospitals, schools, markets, busStops, roads] = found;
-  return { source: 'osm', radius_m: RADIUS_M, hospitals, schools, markets, busStops, majorRoad: roads[0] ?? null };
+  // Photon indexes a long road by one point, so it misses roads like NH-48 next to the pin;
+  // fall back to the road the pin snaps to and keep it only if it is a major one.
+  const majorRoad = roads[0] ?? (await snappedMajorRoad(lat, lon));
+  return { source: 'osm', radius_m: RADIUS_M, hospitals, schools, markets, busStops, majorRoad };
 }
 
 // --- Provider 2: Overpass mirrors. Precise (true distance to roads) but often at capacity. ---
@@ -120,6 +123,25 @@ export async function reverseGeocode(lat: number, lon: number): Promise<ReverseG
     };
     cache.set(key, out);
     return out;
+  } catch {
+    return null;
+  }
+}
+
+const MAJOR_ROAD = /^(motorway|trunk|primary|secondary)(_link)?$/;
+
+/** Name of the road the point snaps to, if it is a major road (Nominatim). */
+async function snappedMajorRoad(lat: number, lon: number): Promise<string | null> {
+  const wait = lastCall + 1000 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastCall = Date.now();
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&lat=${lat}&lon=${lon}`;
+    const res = await fetch(url, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' }, signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { category?: string; type?: string; name?: string; address?: Record<string, string> };
+    if (j.category !== 'highway' || !MAJOR_ROAD.test(j.type ?? '')) return null;
+    return j.name || j.address?.road || `${j.type?.replace('_link', '')} road`;
   } catch {
     return null;
   }

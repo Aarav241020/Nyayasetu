@@ -171,11 +171,12 @@ function OverdueCard({
 
           <button
             onClick={() => onEscalate(complaint.id, reassignTo || undefined)}
-            disabled={escalating}
+            disabled={escalating || (complaint.status === 'escalated' && !reassignTo)}
+            title={complaint.status === 'escalated' && !reassignTo ? 'Already escalated. Pick an officer to reassign.' : undefined}
             className="flex items-center justify-center gap-1 px-4 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium
               hover:bg-red-700 disabled:opacity-50 transition-all w-full sm:w-auto"
           >
-            {escalating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Escalate'}
+            {escalating ? <Loader2 className="w-3 h-3 animate-spin" /> : complaint.status === 'escalated' ? (reassignTo ? 'Reassign' : 'Already escalated') : 'Escalate'}
           </button>
         </div>
       </div>
