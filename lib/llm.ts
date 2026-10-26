@@ -12,5 +12,7 @@ export function groq(): OpenAI | null {
   return client;
 }
 
-export const CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'llama-3.1-8b-instant';
-export const VISION_MODEL = process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+// Groq retires models often; check https://console.groq.com/docs/models and override in .env.local.
+// qwen3.8-27b (Oct 2026): reads images, returns valid JSON, good Hindi, fast.
+export const CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'qwen/qwen3.8-27b';
+export const VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.8-27b';
