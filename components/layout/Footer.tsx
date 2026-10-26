@@ -24,7 +24,7 @@ export default function Footer() {
               </div>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm mb-6">
-              Civic tech prototype to explore Delhi schemes and civic complaints.
+              Report civic issues, see how urgent they are, and track them until they&apos;re fixed.
             </p>
           </div>
 
@@ -34,9 +34,6 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link href="/about" className="text-sm text-gray-400 hover:text-white transition-colors">{t('footer.aboutUs')}</Link>
-              </li>
-              <li>
-                <Link href="/schemes" className="text-sm text-gray-400 hover:text-white transition-colors">{t('landing.exploreSchemes')}</Link>
               </li>
               <li>
                 <Link href="/chat" className="text-sm text-gray-400 hover:text-white transition-colors">{t('nav.chatAssistant')}</Link>

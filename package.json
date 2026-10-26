@@ -8,11 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "seed:officers": "tsx scripts/seed-officer.ts",
-    "seed:schemes": "tsx scripts/seed-schemes.ts",
     "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
     "@supabase/supabase-js": "^2.100.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",

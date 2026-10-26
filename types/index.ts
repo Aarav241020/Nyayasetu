@@ -187,64 +187,6 @@ export interface ValidateSessionResponse {
   phone: string | null;
 }
 
-// ---------------------- Scheme ----------------------
-
-export type SchemeCategory =
-  | 'students'
-  | 'women'
-  | 'senior_citizens'
-  | 'small_business'
-  | 'workers'
-  | 'disability'
-  | 'farmers'
-  | 'general';
-
-export interface Scheme {
-  id: string;
-  title_en: string;
-  title_hi: string;
-  short_description_en: string;
-  short_description_hi: string;
-  description_en: string;
-  description_hi: string;
-  eligibility_en: string;
-  eligibility_hi: string;
-  benefits_en: string;
-  benefits_hi: string;
-  apply_url: string | null;
-  application_link: string | null;
-  department: string;
-  category: SchemeCategory;
-  target_groups: string[];
-  tags: string[];
-  required_documents: string[];
-  min_age: number | null;
-  max_age: number | null;
-  gender: string | null;
-  occupation: string | null;
-  social_category: string | null;
-  has_disability: boolean;
-  max_income: number | null;
-  deadline: string | null;
-  is_active: boolean;
-  created_at: string;
-}
-
-// ---------------------- Scheme Recommendation ----------------------
-
-export interface SchemeRecommendRequest {
-  age_group: string | null;
-  gender: string | null;
-  occupation: string | null;
-  social_category: string | null;
-  has_disability: boolean;
-}
-
-export interface SchemeRecommendResult {
-  scheme: Scheme;
-  match_reasons: string[];
-}
-
 // ---------------------- Classifier Result ----------------------
 
 export interface ClassifyComplaintResult {

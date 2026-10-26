@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: "https://api.groq.com/openai/v1",
-});
+import { groq, CHAT_MODEL } from "@/lib/llm";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.GROQ_API_KEY) {
+    const client = groq();
+    if (!client) {
       return NextResponse.json(
         { error: "Groq API key not configured." },
         { status: 503 }
@@ -28,8 +24,8 @@ Rules:
 - Do not invent government schemes.
 `;
 
-    const stream = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+    const stream = await client.chat.completions.create({
+      model: CHAT_MODEL,
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },

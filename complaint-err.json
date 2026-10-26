@@ -1,6 +1,0 @@
-{
-  "code": "23502",
-  "details": "Failing row contains (21437105-be5c-40f1-8d78-d20cf58facaa, NYC-20260326-00001, ff331df1-40b5-4909-8271-b07ad5ea1735, null, null, Huge pile of garbage near market, Garbage hasn't been collected for 4 days., garbage_collection, dept_001, null, Central Zone, Ward 12 (Central), Connaught Place Block A, Near Palika Bazaar, null, null, medium, submitted, 72, 2026-03-28 02:43:42.785+00, f, null, null, null, 2026-03-26 02:43:42.785+00, 2026-03-26 02:43:43.536685+00).",
-  "hint": null,
-  "message": "null value in column \"citizen_phone\" of relation \"complaints\" violates not-null constraint"
-}
