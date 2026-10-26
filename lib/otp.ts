@@ -78,6 +78,9 @@ export async function sendOTP(phone: string): Promise<SendOTPResponse> {
       success: true,
       message: 'OTP sent successfully.',
       expires_in_seconds: OTP_EXPIRY_SECONDS,
+      // No SMS is sent in mock mode, so the code has to reach the user somehow.
+      // Never returned when real SMS is configured.
+      ...(isMockMode() && { demo_otp: otpCode }),
     };
   } catch (err) {
     console.error('[OTP] sendOTP error:', err);

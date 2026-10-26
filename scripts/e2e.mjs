@@ -1,10 +1,8 @@
 // End-to-end check against a running server: node scripts/e2e.mjs [baseUrl]
-// Needs OTP_MOCK_MODE=true and the dev server log at DEV_LOG (mock OTPs are printed there).
-import { readFileSync } from 'node:fs';
+// Needs OTP_MOCK_MODE=true (the demo OTP comes back in the send-otp response).
 import assert from 'node:assert/strict';
 
 const BASE = process.argv[2] ?? 'http://localhost:3000';
-const LOG = process.env.DEV_LOG;
 const api = async (path, body, token) => {
   const res = await fetch(BASE + path, {
     method: body ? 'POST' : 'GET',
@@ -18,10 +16,14 @@ const patch = async (path, body, token) => {
   return { status: res.status, json: await res.json() };
 };
 const step = (msg) => console.log('✔', msg);
+// 1x1 JPEG, enough to exercise the upload path
+const PHOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/yQALCAABAAEBAREA/8wABgAQEAX/2gAIAQEAAD8A0s8g/9k=';
 
 async function citizenSession(phone) {
-  assert.equal((await api('/api/auth/send-otp', { phone })).json.success, true);
-  const otp = [...readFileSync(LOG, 'utf8').matchAll(new RegExp(`Phone: ${phone} \\| OTP: (\\d{6})`, 'g'))].pop()[1];
+  const sent = (await api('/api/auth/send-otp', { phone })).json;
+  assert.equal(sent.success, true);
+  const otp = sent.demo_otp;
+  assert.match(otp ?? '', /^\d{6}$/, 'demo OTP returned in mock mode');
   const v = await api('/api/auth/verify-otp', { phone, otp });
   assert.ok(v.json.session_token, 'verify-otp returned a session');
   return v.json.session_token;
@@ -43,12 +45,15 @@ const token = await citizenSession('9876500001');
 const filed = await api('/api/complaints', {
   session_token: token, name: 'E2E Tester', title: 'Manhole overflowing in Lajpat Nagar market lane',
   category: 'sewer_blockage', description: 'The manhole cover is broken and sewage is spilling into the market lane, children walk here.',
-  address: '', landmark: null, ward: null, latitude: 28.56803, longitude: 77.24336, photo: null,
+  address: '', landmark: null, ward: null, latitude: 28.56803, longitude: 77.24336, photo: PHOTO,
 });
 assert.equal(filed.json.success, true, JSON.stringify(filed.json));
 const p = filed.json.priority;
 assert.ok(p.score > 0 && ['P1', 'P2', 'P3', 'P4'].includes(p.band));
 assert.ok(p.factors.find((f) => f.key === 'frequency').points > 0, 'nearby duplicate counted');
+const stored = (await api(`/api/complaints/track/${filed.json.complaint_uid}`)).json.complaint;
+assert.equal(stored.proof_image_urls.length, 1, 'photo stored');
+assert.equal((await fetch(stored.proof_image_urls[0])).status, 200, 'photo URL is public');
 step(`filed ${filed.json.complaint_uid}: ${p.score} ${p.band}; ${p.factors.map((f) => `${f.key}=${f.points}`).join(', ')}`);
 
 const near = await api('/api/complaints/nearby?lat=28.56803&lng=77.24336&category=sewer_blockage');

@@ -185,6 +185,7 @@ export interface SendOTPResponse {
   success: boolean;
   message: string;
   expires_in_seconds: number;
+  demo_otp?: string; // only when OTP_MOCK_MODE=true
 }
 
 export interface VerifyOTPResponse {

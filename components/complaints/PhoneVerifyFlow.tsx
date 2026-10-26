@@ -22,6 +22,7 @@ export default function PhoneVerifyFlow({ onVerified }: PhoneVerifyFlowProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -52,7 +53,8 @@ export default function PhoneVerifyFlow({ onVerified }: PhoneVerifyFlowProps) {
       if (data.success) {
         setStep('otp');
         setResendCooldown(30);
-        setOtp('');
+        setDemoOtp(data.demo_otp ?? null);
+        setOtp(data.demo_otp ?? '');
       } else {
         setError(data.message || 'Failed to send OTP.');
       }
@@ -180,9 +182,15 @@ export default function PhoneVerifyFlow({ onVerified }: PhoneVerifyFlowProps) {
               Enter OTP
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              We sent a 6-digit code to +91 {phone}
+              {demoOtp ? `Demo mode: no SMS is sent to +91 ${phone}` : `We sent a 6-digit code to +91 ${phone}`}
             </p>
           </div>
+
+          {demoOtp && (
+            <p className="text-sm text-center text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Your code is <span className="font-mono font-bold tracking-widest">{demoOtp}</span> (filled in for you). Press Verify.
+            </p>
+          )}
 
           <input
             type="text"

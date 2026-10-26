@@ -48,7 +48,7 @@ cp .env.local.example .env.local      # fill in Supabase keys (+ optional GROQ_A
 3. **Start:** `npm run dev` → http://localhost:3000
 
 Demo logins (at `/login`): `officer@nyayasetu.in` / `Officer@123` (Roads) · `supervisor@nyayasetu.in` / `Super@123`.
-Citizen OTPs are printed in the terminal while `OTP_MOCK_MODE=true`.
+While `OTP_MOCK_MODE=true` no SMS is sent: the code is shown on screen (and printed in the terminal).
 
 Run the cron by hand: `curl http://localhost:3000/api/cron/escalate`.
 
@@ -56,7 +56,7 @@ Run the cron by hand: `curl http://localhost:3000/api/cron/escalate`.
 
 ```bash
 npm test          # priority engine tests
-DEV_LOG=dev.log npm run test:e2e   # full flow against a running dev server (npm run dev > dev.log)
+npm run test:e2e  # full flow against a running dev server (npm run dev)
 npx tsc --noEmit  # types
 npm run lint
 npm run build
