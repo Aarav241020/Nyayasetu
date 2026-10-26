@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (reassign_to_officer_id) {
-      updateData.officer_id = reassign_to_officer_id;
+      updateData.assigned_officer_id = reassign_to_officer_id;
     }
 
     const { error: updateErr } = await supabaseAdmin

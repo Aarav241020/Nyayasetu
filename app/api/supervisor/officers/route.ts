@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
   try {
     // Get all officers
     const { data: officers, error: offErr } = await supabaseAdmin
-      .from('officers')
-      .select('id, user_id, department_id');
+      .from('users')
+      .select('id, full_name, department_id')
+      .eq('role', 'officer');
 
     if (offErr) {
       console.error('[API] officers error:', offErr.message);
@@ -24,11 +25,6 @@ export async function GET(request: NextRequest) {
 
     for (const officer of officers || []) {
       // Get user name
-      const { data: user } = await supabaseAdmin
-        .from('users')
-        .select('full_name')
-        .eq('id', officer.user_id)
-        .single();
 
       // Get department name
       const { data: dept } = await supabaseAdmin
@@ -41,7 +37,7 @@ export async function GET(request: NextRequest) {
       const { data: complaints } = await supabaseAdmin
         .from('complaints')
         .select('id, status, sla_deadline, created_at, updated_at')
-        .eq('officer_id', officer.id);
+        .eq('assigned_officer_id', officer.id);
 
       const all = complaints || [];
       const assigned = all.length;
@@ -64,7 +60,7 @@ export async function GET(request: NextRequest) {
 
       results.push({
         officer_id: officer.id,
-        officer_name: user?.full_name || 'Unknown',
+        officer_name: officer.full_name || 'Unknown',
         department_name: dept?.name || officer.department_id,
         assigned_count: assigned,
         resolved_count: resolved,

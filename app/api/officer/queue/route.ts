@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status');
     const urgencyFilter = searchParams.get('urgency');
-    const sortBy = searchParams.get('sort_by') || 'created_at';
+    const sortBy = searchParams.get('sort_by') || 'priority_score';
     const sortOrder = searchParams.get('sort_order') || 'desc';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const perPage = 20;
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('complaints')
       .select('*', { count: 'exact' })
-      .eq('officer_id', user.id);
+      .eq('assigned_officer_id', user.id);
 
     if (statusFilter) {
       query = query.eq('status', statusFilter);
@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('urgency', urgencyFilter);
     }
 
-    const validSortFields = ['sla_deadline', 'created_at', 'updated_at'];
-    const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at';
+    const validSortFields = ['priority_score', 'sla_deadline', 'created_at', 'updated_at'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'priority_score';
 
     query = query.order(sortField, { ascending: sortOrder === 'asc' });
 

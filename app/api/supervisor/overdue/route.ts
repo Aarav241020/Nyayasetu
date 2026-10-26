@@ -29,21 +29,13 @@ export async function GET(request: NextRequest) {
         let officer_name: string | null = null;
         let department_name: string | null = null;
 
-        if (c.officer_id) {
+        if (c.assigned_officer_id) {
           const { data: officer } = await supabaseAdmin
-            .from('officers')
-            .select('id, user_id')
-            .eq('id', c.officer_id)
+            .from('users')
+            .select('full_name')
+            .eq('id', c.assigned_officer_id)
             .single();
-
-          if (officer) {
-            const { data: user } = await supabaseAdmin
-              .from('users')
-              .select('full_name')
-              .eq('id', officer.user_id)
-              .single();
-            officer_name = user?.full_name || null;
-          }
+          officer_name = officer?.full_name || null;
         }
 
         if (c.department_id) {

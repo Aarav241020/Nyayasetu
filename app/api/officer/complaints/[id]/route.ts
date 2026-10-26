@@ -19,7 +19,7 @@ export async function GET(
       .eq('id', id)
       .single();
 
-    if (error || !complaint) {
+    if (error || !complaint || complaint.assigned_officer_id !== authResult.id) {
       return NextResponse.json(
         { success: false, message: 'Complaint not found.' },
         { status: 404 }

@@ -1,19 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { runAutoEscalation } from '@/lib/escalation';
+import { rescoreOpenComplaints } from '@/lib/scoring';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+// Run every ~15 min from any scheduler. If CRON_SECRET is set, require `Authorization: Bearer <secret>`.
+export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (secret && request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ success: false, message: 'Unauthorized.' }, { status: 401 });
+  }
   try {
-    const count = await runAutoEscalation();
+    const escalated = await runAutoEscalation();
+    const rescored = await rescoreOpenComplaints();
     return NextResponse.json({
       success: true,
-      message: `Auto-escalated ${count} complaint(s).`,
-      escalated_count: count,
+      message: `Escalated ${escalated}, re-scored ${rescored}.`,
+      escalated_count: escalated,
+      rescored_count: rescored,
     });
   } catch (err) {
     console.error('[Cron] escalation error:', err);
-    return NextResponse.json(
-      { success: false, message: 'Escalation failed.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Escalation failed.' }, { status: 500 });
   }
 }

@@ -102,6 +102,8 @@ export interface Complaint {
   landmark: string | null;
   latitude: number | null;
   longitude: number | null;
+  city: string | null;
+  state: string | null;
   ward: string | null;
   zone: string | null;
   status: ComplaintStatus;
@@ -113,6 +115,14 @@ export interface Complaint {
   resolution_proof_url: string | null;
   citizen_feedback: string | null;
   citizen_rating: number | null;
+  is_escalated: boolean;
+  ai_severity: AISeverity | null;
+  geo_context: GeoContext | null;
+  confirmations: number;
+  priority_score: number;
+  priority_band: PriorityBand;
+  priority_breakdown: PriorityFactor[];
+  parent_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -187,6 +197,41 @@ export interface ValidateSessionResponse {
   phone: string | null;
 }
 
+// ---------------------- Priority Scoring ----------------------
+
+export type PriorityBand = 'P1' | 'P2' | 'P3' | 'P4';
+
+export interface PriorityFactor {
+  key: 'severity' | 'location' | 'frequency' | 'time' | 'season';
+  label: string;
+  points: number;
+  max: number;
+  reason: string;
+}
+
+export interface PriorityResult {
+  score: number;
+  band: PriorityBand;
+  factors: PriorityFactor[];
+}
+
+export interface AISeverity {
+  severity: number; // 1–5
+  hazards: string[];
+  reasoning: string;
+  source: 'ai' | 'keywords';
+}
+
+export interface GeoContext {
+  source: 'osm' | 'unavailable';
+  radius_m: number;
+  hospitals: string[];
+  schools: string[];
+  markets: string[];
+  busStops: string[];
+  majorRoad: string | null;
+}
+
 // ---------------------- Classifier Result ----------------------
 
 export interface ClassifyComplaintResult {
@@ -233,6 +278,9 @@ export interface FileComplaintRequest {
   address: string;
   landmark: string | null;
   ward: string | null;
+  latitude: number;
+  longitude: number;
+  photo: string | null; // JPEG data URL, resized in the browser
 }
 
 export interface FileComplaintResponse {
@@ -240,6 +288,7 @@ export interface FileComplaintResponse {
   complaint_uid: string | null;
   message: string;
   classification: ClassifyComplaintResult | null;
+  priority?: PriorityResult | null;
 }
 
 // ---------------------- Officer Portal ----------------------

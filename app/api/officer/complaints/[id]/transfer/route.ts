@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin, leastLoadedOfficer } from '@/lib/db';
 import { requireAuth } from '@/lib/middleware';
 import { UserRole, ComplaintStatus } from '@/types';
 import type { TransferComplaintRequest } from '@/types';
@@ -25,6 +25,11 @@ export async function POST(
     }
 
     // Update complaint department and status
+    const { data: current } = await supabaseAdmin.from('complaints').select('assigned_officer_id').eq('id', id).single();
+    if (!current || current.assigned_officer_id !== user.id) {
+      return NextResponse.json({ success: false, message: 'This complaint is not assigned to you.' }, { status: 403 });
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from('complaints')
       .update({
@@ -52,16 +57,8 @@ export async function POST(
     });
 
     // Find and assign new officer in target department
-    const { data: officers } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('department_id', department_id)
-      .eq('role', 'officer')
-      .eq('is_active', true)
-      .limit(1);
-
-    if (officers && officers.length > 0) {
-      const newOfficerId = officers[0].id;
+    const newOfficerId = await leastLoadedOfficer(department_id);
+    if (newOfficerId) {
 
       await supabaseAdmin
         .from('complaints')

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db';
 import { requireAuth } from '@/lib/middleware';
 import { UserRole, ComplaintStatus, VALID_STATUS_TRANSITIONS } from '@/types';
 import type { UpdateComplaintStatusRequest } from '@/types';
+import { rescoreComplaint } from '@/lib/scoring';
 
 export async function PATCH(
   request: NextRequest,
@@ -27,7 +28,7 @@ export async function PATCH(
     // Fetch current complaint
     const { data: complaint, error: fetchError } = await supabaseAdmin
       .from('complaints')
-      .select('id, status')
+      .select('id, status, assigned_officer_id')
       .eq('id', id)
       .single();
 
@@ -39,6 +40,10 @@ export async function PATCH(
     }
 
     // Validate status transition
+    if (complaint.assigned_officer_id !== user.id) {
+      return NextResponse.json({ success: false, message: 'This complaint is not assigned to you.' }, { status: 403 });
+    }
+
     const currentStatus = complaint.status as ComplaintStatus;
     const allowed = VALID_STATUS_TRANSITIONS[currentStatus] || [];
     if (!allowed.includes(newStatus)) {
@@ -82,6 +87,8 @@ export async function PATCH(
       notes: remarks || null,
       public_note: public_note || null,
     });
+
+    await rescoreComplaint(id);
 
     return NextResponse.json({
       success: true,
