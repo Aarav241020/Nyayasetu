@@ -202,10 +202,10 @@ export default function OfficerComplaintDetailPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setTransferMsg('Complaint transferred.');
-        setTransferDept('');
-        setTransferReason('');
-        fetchDetail();
+        // The complaint now belongs to another department's officer, so this officer
+        // can no longer open it; go back to the queue instead of a "not found" screen.
+        setTransferMsg('Complaint transferred. Returning to your queue…');
+        setTimeout(() => router.push('/officer'), 1200);
       } else {
         setTransferMsg(data.message || 'Transfer failed.');
       }
@@ -214,7 +214,7 @@ export default function OfficerComplaintDetailPage() {
     } finally {
       setTransferring(false);
     }
-  }, [params.id, transferDept, transferReason, fetchDetail]);
+  }, [params.id, transferDept, transferReason, router]);
 
   if (loading) {
     return (

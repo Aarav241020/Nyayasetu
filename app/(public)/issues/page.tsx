@@ -98,7 +98,7 @@ export default function IssuesPage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-5">
+        <div className="grid lg:grid-cols-5 gap-5 [&>*]:min-w-0">
           <div className="lg:col-span-3">
             <IssuesMap key={city} issues={shown} center={view.center} zoom={view.zoom} />
           </div>

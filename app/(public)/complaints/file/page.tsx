@@ -84,6 +84,7 @@ export default function FileComplaintPage() {
   const [category, setCategory] = useState<ComplaintCategory | null>(null);
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
+  const [addressTyped, setAddressTyped] = useState(false); // stop auto-filling once the person edits it
   const [landmark, setLandmark] = useState('');
   const [ward, setWard] = useState('');
   const [location, setLocation] = useState<LatLng | null>(null);
@@ -120,10 +121,10 @@ export default function FileComplaintPage() {
     try {
       const res = await fetch(`/api/geo/reverse?lat=${p.lat}&lng=${p.lng}`);
       const data = await res.json();
-      if (!data.success) setLocError(data.message || '');
-      else if (data.place?.address) setAddress((a) => a || data.place.address);
+      if (!data.success) { setLocError(data.message || ''); if (!addressTyped) setAddress(''); }
+      else if (data.place?.address && !addressTyped) setAddress(data.place.address);
     } catch { /* address stays editable */ }
-  }, []);
+  }, [addressTyped]);
 
   const useMyLocation = useCallback(() => {
     if (!navigator.geolocation) { setLocError('Your browser cannot share location. Tap the map instead.'); return; }
@@ -227,6 +228,7 @@ export default function FileComplaintPage() {
     setCategory(null);
     setDescription('');
     setAddress('');
+    setAddressTyped(false);
     setLandmark('');
     setWard('');
     setLocation(null);
@@ -429,7 +431,7 @@ export default function FileComplaintPage() {
                 id="complaint-address"
                 type="text"
                 value={address}
-                onChange={(e) => { setAddress(e.target.value); setFormErrors((p) => ({ ...p, address: '' })); }}
+                onChange={(e) => { setAddress(e.target.value); setAddressTyped(e.target.value.trim() !== ''); setFormErrors((p) => ({ ...p, address: '' })); }}
                 placeholder="Full address of the issue location"
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 outline-none
                   focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-gray-900"

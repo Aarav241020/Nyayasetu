@@ -114,7 +114,7 @@ export default function IssuePage({ params }: { params: { uid: string } }) {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-5">
+        <div className="grid lg:grid-cols-3 gap-5 [&>*]:min-w-0">
           <div className="lg:col-span-2 space-y-5">
             <PriorityBreakdown score={c.priority_score} band={c.priority_band} factors={c.priority_breakdown ?? []} />
 

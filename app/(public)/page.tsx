@@ -34,7 +34,7 @@ export default function LandingPage() {
     <div className="flex flex-col w-full animate-fadeIn">
       {/* Hero */}
       <section className="bg-gradient-to-b from-indigo-50 to-white">
-        <div className="max-w-6xl mx-auto px-4 pt-20 pb-16 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-6xl mx-auto px-4 pt-20 pb-16 grid lg:grid-cols-2 gap-12 items-center [&>*]:min-w-0">
           <div>
             <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-sm font-medium mb-6">
               <MapPin className="w-4 h-4" /> {t('landing.v2.badge', { defaultValue: 'Civic issues, India-wide' })}
