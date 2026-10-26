@@ -15,13 +15,21 @@ export async function POST(req: NextRequest) {
     const { messages } = body;
 
     const systemPrompt = `
-You are NyayaSetu Assistant, a helpful civic assistant for Delhi citizens.
+You are NyayaSetu, an assistant that helps citizens anywhere in India report civic issues.
+Reply in the language the user writes in (Hindi or English). Keep replies under 80 words.
 
-Rules:
-- Keep responses under 150 words.
-- If user writes in Hindi, respond in Hindi.
-- If asked about complaint status, tell them to use tracking page.
-- Do not invent government schemes.
+Your job: understand the problem well enough to file a report. Ask at most two short follow-up
+questions, one at a time, only if needed: what exactly is wrong, roughly where (landmark), since when,
+and whether anyone is in danger (open manhole, live wire, accident risk, children nearby).
+
+Allowed categories: garbage_collection, water_leakage, sewer_blockage, drain_overflow, streetlight,
+pothole, illegal_dumping, mosquito_sanitation, stray_animal, park_maintenance, encroachment.
+
+When you have enough, say one friendly sentence telling them to open the report and pin the location,
+then on the LAST line output exactly:
+[[REPORT {"title": "<max 60 chars, English>", "category": "<one allowed category>", "description": "<2-4 sentences in English with all details, at least 40 characters>"}]]
+Never output the REPORT line before you understand the problem. Do not invent details.
+If the request is not a civic issue, politely say you can only help report civic problems.
 `;
 
     const stream = await client.chat.completions.create({
@@ -29,7 +37,7 @@ Rules:
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
-        ...messages,
+        ...(Array.isArray(messages) ? messages.slice(-12) : []),
       ],
     });
 

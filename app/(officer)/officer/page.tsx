@@ -16,7 +16,7 @@ export default function OfficerQueuePage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState('');
-  const [sortBy, setSortBy] = useState('created_at');
+  const [sortBy, setSortBy] = useState('priority_score');
   const [sortOrder, setSortOrder] = useState('desc');
 
   const fetchQueue = useCallback(async () => {
@@ -138,6 +138,7 @@ export default function OfficerQueuePage() {
             className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 outline-none
               focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
           >
+            <option value="priority_score:desc">Highest Priority</option>
             <option value="created_at:desc">Newest First</option>
             <option value="created_at:asc">Oldest First</option>
             <option value="sla_deadline:asc">SLA Soonest</option>

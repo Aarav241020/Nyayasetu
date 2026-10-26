@@ -28,7 +28,7 @@ function TrackSearchContent() {
       const data = await res.json();
 
       if (data.success) {
-        router.push(`/complaints/track/${trimmed}`);
+        router.push(`/issues/${trimmed}`);
       } else {
         setError(data.message || t('complaints.notFound', { defaultValue: 'Complaint not found.' }));
       }

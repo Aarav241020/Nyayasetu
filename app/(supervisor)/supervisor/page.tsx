@@ -15,8 +15,7 @@ import {
   LineChart, Line,
 } from 'recharts';
 import type { DashboardMetrics, OfficerPerformance } from '@/types';
-import WardHeatmap from '@/components/dashboard/WardHeatmap';
-import { useTranslation } from 'react-i18next';
+import PriorityHotspots from '@/components/dashboard/PriorityHotspots';
 
 const TOKEN_KEY = 'nyayasetu_token';
 
@@ -44,7 +43,6 @@ interface OverdueComplaint {
 }
 
 export default function SupervisorDashboardPage() {
-  const { t } = useTranslation();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [officers, setOfficers] = useState<OfficerPerformance[]>([]);
   const [overdue, setOverdue] = useState<OverdueComplaint[]>([]);
@@ -115,18 +113,6 @@ export default function SupervisorDashboardPage() {
     count: d.count,
   }));
 
-  const wardData = metrics.ward_hotspots && metrics.ward_hotspots.length > 0
-    ? metrics.ward_hotspots.map((w) => ({ ward: w.ward, total_complaints: w.count }))
-    : [
-        { ward: "Ward 12 - Central", total_complaints: 18, overdue_complaints: 3 },
-        { ward: "Ward 7 - East", total_complaints: 11, overdue_complaints: 1 },
-        { ward: "Ward 3 - West", total_complaints: 6, overdue_complaints: 0 },
-        { ward: "Ward 22 - North", total_complaints: 4, overdue_complaints: 0 },
-        { ward: "Ward 45 - South", total_complaints: 2, overdue_complaints: 0 },
-        { ward: "Ward 31 - Dwarka", total_complaints: 14, overdue_complaints: 2 },
-        { ward: "Ward 19 - Rohini", total_complaints: 9, overdue_complaints: 1 },
-        { ward: "Ward 8 - Shahdara", total_complaints: 7, overdue_complaints: 0 },
-      ];
 
   return (
     <div className="p-6 max-w-6xl mx-auto w-full animate-fadeIn">
@@ -173,15 +159,11 @@ export default function SupervisorDashboardPage() {
         </div>
       </div>
 
-      {/* Section 2.5 — Ward Heatmap */}
+      {/* Section 2.5 — Priority hotspots */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8">
-        <h2 className="text-xl font-semibold text-slate-900 mb-1">
-          {t('supervisor.heatmap.title', { defaultValue: 'Ward Complaint Heatmap' })}
-        </h2>
-        <p className="text-sm text-slate-500 mb-6">
-          {t('supervisor.heatmap.description', { defaultValue: 'Color intensity indicates complaint volume per ward. Red = high volume, Green = low.' })}
-        </p>
-        <WardHeatmap wards={wardData} />
+        <h2 className="text-xl font-semibold text-slate-900 mb-1">Priority hotspots</h2>
+        <p className="text-sm text-slate-500 mb-6">Open issues across all areas. Bigger, redder pins have higher priority scores.</p>
+        <PriorityHotspots />
       </div>
 
       {/* Section 3 — Overdue Complaints */}

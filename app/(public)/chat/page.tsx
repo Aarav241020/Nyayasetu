@@ -7,11 +7,26 @@ import { useLanguage } from '@/components/layout/LanguageProvider';
 import { useTranslation } from 'react-i18next';
 
 const STARTER_QUESTIONS = [
-  { key: 'starter1', icon: '🎯' },
-  { key: 'starter2', icon: '💧' },
-  { key: 'starter3', icon: '📋' },
-  { key: 'starter4', icon: '⏱️' },
+  { key: 'starter1', icon: '🕳️' },
+  { key: 'starter2', icon: '🗑️' },
+  { key: 'starter3', icon: '💡' },
+  { key: 'starter4', icon: '🚰' },
 ];
+
+const REPORT_RE = /\[\[REPORT\s*(\{[\s\S]*?\})\s*\]\]/;
+
+/** Split the assistant's text from the machine-readable report the prompt asks for. */
+function splitReport(content: string): { text: string; href: string | null } {
+  const m = REPORT_RE.exec(content);
+  if (!m) return { text: content.replace(/\[\[REPORT[\s\S]*$/, '').trim(), href: null };
+  try {
+    const r = JSON.parse(m[1]) as { title?: string; category?: string; description?: string };
+    const q = new URLSearchParams({ title: r.title ?? '', category: r.category ?? '', description: r.description ?? '' });
+    return { text: content.replace(m[0], '').trim(), href: `/complaints/file?${q}` };
+  } catch {
+    return { text: content.replace(m[0], '').trim(), href: null };
+  }
+}
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -197,7 +212,19 @@ export default function ChatPage() {
                       : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md'
                   }`}
                 >
-                  {msg.content || (
+                  {msg.content ? (() => {
+                    const { text, href } = msg.role === 'assistant' ? splitReport(msg.content) : { text: msg.content, href: null };
+                    return (
+                      <>
+                        <span className="whitespace-pre-line">{text}</span>
+                        {href && (
+                          <a href={href} className="mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-700 text-white font-medium hover:bg-indigo-800">
+                            {t('chat.openReport')} →
+                          </a>
+                        )}
+                      </>
+                    );
+                  })() : (
                     <span className="flex items-center gap-1 text-gray-400">
                       <Loader2 className="w-3 h-3 animate-spin" /> {t('chat.thinking')}
                     </span>

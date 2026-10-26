@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Phone,
   FileText,
@@ -13,11 +14,25 @@ import {
   Copy,
   ExternalLink,
   RotateCcw,
+  MapPin,
+  Camera,
+  LocateFixed,
+  X,
 } from 'lucide-react';
 import PhoneVerifyFlow from '@/components/complaints/PhoneVerifyFlow';
 import CategorySelector from '@/components/complaints/CategorySelector';
 import { ComplaintCategory } from '@/types';
-import type { ClassifyComplaintResult } from '@/types';
+import type { ClassifyComplaintResult, PriorityResult } from '@/types';
+import PriorityBreakdown from '@/components/priority/PriorityBreakdown';
+import { resizeImage } from '@/lib/image';
+import type { LatLng } from '@/components/map/LocationPicker';
+
+const LocationPicker = dynamic(() => import('@/components/map/LocationPicker'), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full rounded-lg bg-gray-100 animate-pulse" />,
+});
+
+interface NearbyIssue { uid: string; title: string; status: string; priority_band: string; confirmations: number; distance_m: number }
 import { classifyComplaint } from '@/lib/classifier';
 import { useTranslation } from 'react-i18next';
 
@@ -71,6 +86,12 @@ export default function FileComplaintPage() {
   const [address, setAddress] = useState('');
   const [landmark, setLandmark] = useState('');
   const [ward, setWard] = useState('');
+  const [location, setLocation] = useState<LatLng | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState('');
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [nearby, setNearby] = useState<NearbyIssue[]>([]);
+  const [priority, setPriority] = useState<PriorityResult | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Step 3: Review - classification preview
@@ -81,6 +102,51 @@ export default function FileComplaintPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // ---- Prefill from the chat assistant (/complaints/file?title=..&category=..&description=..) ----
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('title')) setTitle(q.get('title')!);
+    if (q.get('description')) setDescription(q.get('description')!);
+    const c = q.get('category') as ComplaintCategory | null;
+    if (c && Object.values(ComplaintCategory).includes(c)) setCategory(c);
+  }, []);
+
+  // ---- Location: pin -> address, and duplicate check ----
+  const handleLocation = useCallback(async (p: LatLng) => {
+    setLocation(p);
+    setLocError('');
+    setFormErrors((e) => ({ ...e, location: '' }));
+    try {
+      const res = await fetch(`/api/geo/reverse?lat=${p.lat}&lng=${p.lng}`);
+      const data = await res.json();
+      if (!data.success) setLocError(data.message || '');
+      else if (data.place?.address) setAddress((a) => a || data.place.address);
+    } catch { /* address stays editable */ }
+  }, []);
+
+  const useMyLocation = useCallback(() => {
+    if (!navigator.geolocation) { setLocError('Your browser cannot share location. Tap the map instead.'); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setLocating(false); handleLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+      () => { setLocating(false); setLocError('Location permission denied. Tap the map to place the pin.'); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, [handleLocation]);
+
+  useEffect(() => {
+    if (!location || !category) { setNearby([]); return; }
+    fetch(`/api/complaints/nearby?lat=${location.lat}&lng=${location.lng}&category=${category}`)
+      .then((res) => res.json())
+      .then((d) => setNearby(d.issues ?? []))
+      .catch(() => setNearby([]));
+  }, [location, category]);
+
+  const handlePhoto = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    try { setPhoto(await resizeImage(file)); } catch { setFormErrors((e) => ({ ...e, photo: 'Could not read that image.' })); }
+  }, []);
 
   // ---- Step 1 callback ----
   const handlePhoneVerified = useCallback((token: string, verifiedPhone: string) => {
@@ -97,10 +163,10 @@ export default function FileComplaintPage() {
     if (!category) errors.category = 'Please select a category.';
     if (!description.trim()) errors.description = 'Description is required.';
     if (description.trim().length < 30) errors.description = 'Description must be at least 30 characters.';
-    if (!address.trim()) errors.address = 'Address is required.';
+    if (!location) errors.location = 'Pin the issue on the map.';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [name, title, category, description, address]);
+  }, [name, title, category, description, location]);
 
   const handleNextToReview = useCallback(() => {
     if (!validateForm()) return;
@@ -128,6 +194,9 @@ export default function FileComplaintPage() {
           address: address.trim(),
           landmark: landmark.trim() || null,
           ward: ward.trim() || null,
+          latitude: location?.lat,
+          longitude: location?.lng,
+          photo,
         }),
       });
 
@@ -136,6 +205,7 @@ export default function FileComplaintPage() {
       if (data.success && data.complaint_uid) {
         setComplaintUID(data.complaint_uid);
         setClassification(data.classification);
+        setPriority(data.priority ?? null);
         setStep(4);
       } else {
         setSubmitError(data.message || 'Failed to file complaint.');
@@ -145,7 +215,7 @@ export default function FileComplaintPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [sessionToken, name, title, category, description, address, landmark, ward]);
+  }, [sessionToken, name, title, category, description, address, landmark, ward, location, photo, t]);
 
   // ---- Step 4: Reset ----
   const handleFileAnother = useCallback(() => {
@@ -159,6 +229,10 @@ export default function FileComplaintPage() {
     setAddress('');
     setLandmark('');
     setWard('');
+    setLocation(null);
+    setPhoto(null);
+    setNearby([]);
+    setPriority(null);
     setFormErrors({});
     setClassification(null);
     setComplaintUID('');
@@ -295,10 +369,61 @@ export default function FileComplaintPage() {
               {formErrors.description && <p className="text-xs text-red-600 mt-1">{formErrors.description}</p>}
             </div>
 
+            {/* Location (geo-tag) */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  <MapPin className="inline w-4 h-4 mr-1 text-indigo-600" />Location <span className="text-red-500">*</span>
+                </label>
+                <button type="button" onClick={useMyLocation} disabled={locating}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:text-indigo-900 disabled:opacity-50">
+                  {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />} Use my location
+                </button>
+              </div>
+              <LocationPicker value={location} onChange={handleLocation} />
+              <p className="text-xs text-gray-500 mt-1">
+                {location ? `Pinned at ${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}. Drag the pin to adjust.` : 'Tap the map or use your location. Anywhere in India.'}
+              </p>
+              {(formErrors.location || locError) && <p className="text-xs text-red-600 mt-1">{formErrors.location || locError}</p>}
+              {nearby.length > 0 && (
+                <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
+                  <p className="font-medium text-amber-900">Is this the same issue? {nearby.length} similar report{nearby.length > 1 ? 's are' : ' is'} already open nearby:</p>
+                  <ul className="mt-2 space-y-1">
+                    {nearby.slice(0, 3).map((n) => (
+                      <li key={n.uid} className="flex items-center justify-between gap-2">
+                        <span className="text-amber-900 truncate">{n.title} <span className="text-amber-700">· {n.distance_m} m away · {n.priority_band}</span></span>
+                        <a href={`/issues/${n.uid}`} className="shrink-0 text-indigo-700 font-medium hover:underline">I see this too →</a>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-amber-700 mt-2">Confirming an existing report raises its priority faster than filing a duplicate. Different problem? Just continue.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Photo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Camera className="inline w-4 h-4 mr-1 text-indigo-600" />Photo <span className="text-gray-400 font-normal">(optional, helps the AI judge severity)</span>
+              </label>
+              {photo ? (
+                <div className="relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo} alt="Issue photo preview" className="h-40 rounded-lg border border-gray-200 object-cover" />
+                  <button type="button" onClick={() => setPhoto(null)} aria-label="Remove photo"
+                    className="absolute -top-2 -right-2 bg-white rounded-full border border-gray-300 p-1 hover:bg-gray-50"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <input type="file" accept="image/*" capture="environment" onChange={(e) => handlePhoto(e.target.files?.[0])}
+                  className="block w-full text-sm text-gray-600 file:mr-3 file:px-4 file:py-2 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+              )}
+              {formErrors.photo && <p className="text-xs text-red-600 mt-1">{formErrors.photo}</p>}
+            </div>
+
             {/* Address */}
             <div>
               <label htmlFor="complaint-address" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('complaints.address', { defaultValue: 'Address' })} <span className="text-red-500">*</span>
+                {t('complaints.address', { defaultValue: 'Address' })} <span className="text-gray-400 font-normal">(filled from the map, edit if needed)</span>
               </label>
               <input
                 id="complaint-address"
@@ -397,6 +522,19 @@ export default function FileComplaintPage() {
                   <span className="text-gray-500">{t('complaints.address', { defaultValue: 'Address' })}</span>
                   <span className="col-span-2 text-gray-900">{address}</span>
                 </div>
+                {location && (
+                  <div className="grid grid-cols-3 gap-2 text-sm border-b border-gray-100 pb-3">
+                    <span className="text-gray-500">Map pin</span>
+                    <span className="col-span-2 text-gray-900 font-mono text-xs">{location.lat.toFixed(5)}, {location.lng.toFixed(5)}</span>
+                  </div>
+                )}
+                {photo && (
+                  <div className="grid grid-cols-3 gap-2 text-sm border-b border-gray-100 pb-3">
+                    <span className="text-gray-500">Photo</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo} alt="Issue photo" className="col-span-2 h-28 rounded-md object-cover" />
+                  </div>
+                )}
                 {landmark && (
                   <div className="grid grid-cols-3 gap-2 text-sm border-b border-gray-100 pb-3">
                     <span className="text-gray-500">{t('complaints.landmark', { defaultValue: 'Landmark' })}</span>
@@ -509,10 +647,16 @@ export default function FileComplaintPage() {
               </button>
             </div>
 
+            {priority && (
+              <div className="text-left mb-6">
+                <PriorityBreakdown score={priority.score} band={priority.band} factors={priority.factors} />
+              </div>
+            )}
+
             {/* Actions */}
             <div className="space-y-3 max-w-sm mx-auto">
               <a
-                href={`/complaints/track?uid=${complaintUID}`}
+                href={`/issues/${complaintUID}`}
                 className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-md
                   bg-indigo-700 text-white font-medium hover:bg-slate-800 transition-all"
               >

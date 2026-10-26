@@ -8,22 +8,24 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --import tsx --test lib/priority.test.ts",
-    "seed:officers": "tsx scripts/seed-officer.ts",
-    "seed:demo": "tsx scripts/seed-demo.ts"
+    "seed:demo": "node --env-file=.env.local --import tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/leaflet": "^1.9.22",
     "bcryptjs": "^3.0.3",
     "i18next": "^25.10.9",
     "jsonwebtoken": "^9.0.3",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.6.0",
     "next": "14.2.35",
     "openai": "^6.32.0",
     "react": "^18",
     "react-dom": "^18",
     "react-i18next": "^16.6.6",
+    "react-leaflet": "^4.2.1",
     "recharts": "^3.8.0"
   },
   "devDependencies": {

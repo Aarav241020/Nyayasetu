@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NyayaSetu: Civic Issue Reporting & Resolution Tracker
 
-## Getting Started
+**siNUsoid · PS 9.** Citizens pin a civic issue on the map (pothole, garbage, dead streetlight…). NyayaSetu
+**scores its priority automatically and explains every point**, routes it to the right department, and shows
+the public its progress from *reported* to *resolved*.
 
-First, run the development server:
+> Built on NyayaSetu by Anoopkumar V (Next.js + Supabase civic complaints). This fork adds geo-tagging,
+> the priority engine, the public tracker and the extras below.
+
+## What it does
+
+| | |
+|---|---|
+| **Geo-tagged reporting** | Map pin or GPS (anywhere in India), photo, address auto-filled from the pin. Similar open reports within 150 m are shown before you submit, so people *confirm* instead of duplicating. |
+| **Explainable priority (0–100)** | Five factors with fixed weights, and a written reason for each (see below). Officers' queues are sorted by it. |
+| **Public tracker** | `/issues` map + ranked list, `/issues/<ID>` with a reported → assigned → work started → resolved stepper, score breakdown, deadline countdown, timeline and before/after photos. No login needed. |
+| **Accountability** | Per-category deadlines (SLA); overdue issues auto-escalate to a supervisor and that shows publicly. `/stats` publishes on-time rate and average fix time per city and category. |
+| **Extras** | Report by chatting in Hindi or English (`/chat` builds the report for you) · "I see this too" verified confirmations · officer least-load auto-assignment · supervisor priority hotspot map · installable on phones (PWA) · bilingual UI. |
+
+## The priority score
+
+`lib/priority.ts` is a pure, unit-tested function. All weights live in one `WEIGHTS` constant.
+
+| Factor | Max | How |
+|---|---|---|
+| Severity | 35 | An LLM (Groq Llama vision) rates harm 1–5 from the **description and photo**, blended 70/30 with a per-category baseline. No API key → baseline + urgent keywords. |
+| Reports & confirmations | 25 | Similar open reports within 150 m (last 14 days) + verified confirmations, on a **log scale** so spam can't buy the top slot. |
+| Location sensitivity | 20 | Hospitals (6), schools (5), main roads (5), markets (2), bus stops (2) within 250 m, from **OpenStreetMap**. |
+| Time pressure | 15 | Share of the resolution deadline used; overdue = full points. |
+| Seasonal risk | 5 | Drains, sewers, water and mosquito issues during the monsoon (Jun–Sep). |
+
+Bands: **P1 Critical ≥ 70 · P2 High ≥ 50 · P3 Medium ≥ 30 · P4 Low.** Scores are recalculated on filing, on each
+confirmation, on status changes, and by the cron job (time pressure grows on its own).
+
+## Run it locally
+
+Needs Node 20+ and a Supabase project (the free tier is fine).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/Aarav241020/Nyayasetu && cd Nyayasetu
+npm install
+cp .env.local.example .env.local      # fill in Supabase keys (+ optional GROQ_API_KEY)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Database:** paste `supabase/migrations/0001_init.sql` into Supabase → SQL Editor → Run.
+   (Or with the Supabase CLI: `npx supabase link` then `npx supabase db push`.)
+2. **Demo data:** `npm run seed:demo -- --yes` (wipes and recreates ~45 issues in Delhi and Neemrana).
+3. **Start:** `npm run dev` → http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Demo logins (at `/login`): `officer@nyayasetu.in` / `Officer@123` (Roads) · `supervisor@nyayasetu.in` / `Super@123`.
+Citizen OTPs are printed in the terminal while `OTP_MOCK_MODE=true`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run the cron by hand: `curl http://localhost:3000/api/cron/escalate`.
 
-## Learn More
+## Checks
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test          # priority engine tests
+npx tsc --noEmit  # types
+npm run lint
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 14 (App Router, TypeScript) · Tailwind · Supabase (Postgres + Storage) · Leaflet + OpenStreetMap ·
+Groq (Llama) via the OpenAI SDK · react-i18next (English/Hindi) · recharts.

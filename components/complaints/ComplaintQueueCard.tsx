@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { MapPin, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import type { Complaint } from '@/types';
 import { ComplaintStatus } from '@/types';
+import { PriorityBadge } from '@/components/priority/PriorityBreakdown';
 
 interface ComplaintQueueCardProps {
   complaint: Complaint;
@@ -76,6 +77,7 @@ export default function ComplaintQueueCard({ complaint }: ComplaintQueueCardProp
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[complaint.status]}`}>
               {complaint.status.replace('_', ' ').toUpperCase()}
             </span>
+            {complaint.priority_band && <PriorityBadge band={complaint.priority_band} score={complaint.priority_score} />}
           </div>
           <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
             {complaint.title || complaint.description.slice(0, 60)}

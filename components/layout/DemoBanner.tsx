@@ -40,7 +40,7 @@ export default function DemoBanner() {
         </div>
         <div className="order-3 mt-2 flex w-full flex-shrink-0 sm:order-2 sm:mt-0 sm:w-auto items-center gap-3">
           <a
-            href="https://github.com/nyayasetu"
+            href="https://github.com/Aarav241020/Nyayasetu"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center rounded-md border border-transparent bg-white px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
