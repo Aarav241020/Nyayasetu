@@ -56,6 +56,7 @@ Run the cron by hand: `curl http://localhost:3000/api/cron/escalate`.
 
 ```bash
 npm test          # priority engine tests
+DEV_LOG=dev.log npm run test:e2e   # full flow against a running dev server (npm run dev > dev.log)
 npx tsc --noEmit  # types
 npm run lint
 npm run build

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAutoEscalation } from '@/lib/escalation';
-import { rescoreOpenComplaints } from '@/lib/scoring';
+import { rescoreOpenComplaints, retryGeoLookups } from '@/lib/scoring';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,12 +12,14 @@ export async function GET(request: NextRequest) {
   }
   try {
     const escalated = await runAutoEscalation();
+    const geoFixed = await retryGeoLookups();
     const rescored = await rescoreOpenComplaints();
     return NextResponse.json({
       success: true,
-      message: `Escalated ${escalated}, re-scored ${rescored}.`,
+      message: `Escalated ${escalated}, re-scored ${rescored}, retried ${geoFixed} location lookups.`,
       escalated_count: escalated,
       rescored_count: rescored,
+      geo_fixed_count: geoFixed,
     });
   } catch (err) {
     console.error('[Cron] escalation error:', err);

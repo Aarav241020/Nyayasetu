@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/db';
 import { scorePriority, distanceM } from '@/lib/priority';
+import { fetchGeoContext } from '@/lib/geo';
 import type { AISeverity, ComplaintCategory, GeoContext, PriorityResult, Urgency } from '@/types';
 
 export const NEARBY_RADIUS_M = 150;
@@ -69,4 +70,23 @@ export async function rescoreOpenComplaints(): Promise<number> {
   const { data } = await supabaseAdmin.from('complaints').select('id').not('status', 'in', '("resolved","closed")');
   for (const { id } of data ?? []) await rescoreComplaint(id);
   return data?.length ?? 0;
+}
+
+/** Re-try nearby-place lookups that failed when the issue was filed (free map APIs have outages). */
+export async function retryGeoLookups(limit = 10): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('complaints')
+    .select('id, latitude, longitude')
+    .not('latitude', 'is', null)
+    .eq('geo_context->>source', 'unavailable')
+    .limit(limit);
+  let fixed = 0;
+  for (const c of data ?? []) {
+    const geo = await fetchGeoContext(c.latitude, c.longitude);
+    if (geo.source === 'unavailable') break; // provider still down; try again next run
+    await supabaseAdmin.from('complaints').update({ geo_context: geo }).eq('id', c.id);
+    await rescoreComplaint(c.id);
+    fixed++;
+  }
+  return fixed;
 }

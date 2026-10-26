@@ -18,10 +18,14 @@ if (!supabaseAnonKey) {
   );
 }
 
+// Next.js 14 caches fetch() by default, and supabase-js uses fetch, so without this
+// API routes would serve stale rows (e.g. a status change not showing on the tracker).
+const noStore: typeof fetch = (input, init) => fetch(input, { ...init, cache: 'no-store' });
+
 // ---------------------- Public Client (anon key) ----------------------
 // Use this for client-side operations and public queries.
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: noStore } });
 
 // ---------------------- Admin Client (service role key) ----------------------
 // Use this for server-side operations that require elevated privileges.
@@ -39,6 +43,7 @@ function createAdminClient(): SupabaseClient {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: { fetch: noStore },
   });
 }
 

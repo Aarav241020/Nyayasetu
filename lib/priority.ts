@@ -108,7 +108,7 @@ function frequencyFactor(i: PriorityInput): PriorityFactor {
   // Logarithmic: the first few independent reports matter most, so spamming can't buy a top slot.
   const share = Math.min(1, Math.log2(1 + n) / Math.log2(1 + WEIGHTS.frequencySaturation));
   const parts: string[] = [];
-  if (i.confirmations) parts.push(`${plural(i.confirmations, 'person')} confirmed it`);
+  if (i.confirmations) parts.push(`${i.confirmations === 1 ? '1 person' : `${i.confirmations} people`} confirmed it`);
   if (i.nearbyReports) parts.push(`${plural(i.nearbyReports, 'similar report')} within 150 m in 14 days`);
   return {
     key: 'frequency',

@@ -1,7 +1,8 @@
 import type { GeoContext } from '@/types';
 
-// Free OpenStreetMap services (no keys). Both are best-effort: on failure the
-// app keeps working and the priority reason says the check was unavailable.
+// Free OpenStreetMap-based services (no keys). All are best-effort: on failure the
+// app keeps working, the priority reason says the check was unavailable, and the
+// cron job retries the lookup later (lib/scoring.ts).
 const UA = 'NyayaSetu-siNUsoid/1.0 (civic issue tracker demo)';
 const RADIUS_M = 250;
 
@@ -9,8 +10,44 @@ const empty = (source: GeoContext['source']): GeoContext => ({
   source, radius_m: RADIUS_M, hospitals: [], schools: [], markets: [], busStops: [], majorRoad: null,
 });
 
-/** Schools, hospitals, markets, bus stops and main roads around a point (Overpass API). */
-export async function fetchGeoContext(lat: number, lon: number): Promise<GeoContext> {
+// --- Provider 1: Photon (komoot's OSM geocoder). Fast, but rejects bursts. -----------------
+const GROUPS = {
+  hospitals: { radiusKm: RADIUS_M / 1000, tags: ['amenity:hospital', 'amenity:clinic', 'amenity:doctors'] },
+  schools: { radiusKm: RADIUS_M / 1000, tags: ['amenity:school', 'amenity:college', 'amenity:kindergarten', 'amenity:university'] },
+  markets: { radiusKm: RADIUS_M / 1000, tags: ['amenity:marketplace', 'shop:mall'] },
+  busStops: { radiusKm: RADIUS_M / 1000, tags: ['highway:bus_stop', 'amenity:bus_station'] },
+  roads: { radiusKm: 0.15, tags: ['highway:motorway', 'highway:trunk', 'highway:primary', 'highway:secondary'] },
+} as const;
+
+type PhotonFeature = { properties: { name?: string; osm_value?: string; ref?: string } };
+
+async function photonNames(lat: number, lon: number, radiusKm: number, tags: readonly string[]): Promise<string[]> {
+  const url = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=5&radius=${radiusKm}&` + tags.map((t) => `osm_tag=${t}`).join('&');
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(6000) }).catch(() => null);
+    if (res?.ok) {
+      const { features = [] } = (await res.json()) as { features?: PhotonFeature[] };
+      return features.map((f) => f.properties.name || f.properties.ref || (f.properties.osm_value ?? 'place').replace('_', ' '));
+    }
+    // A group that keeps failing fails the whole lookup: "no hospital nearby" when we simply
+    // couldn't check would mis-score the issue.
+    if (attempt >= 2) throw new Error(`photon ${res?.status ?? 'unreachable'}`);
+    await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+  }
+}
+
+async function viaPhoton(lat: number, lon: number): Promise<GeoContext> {
+  // ponytail: sequential (~1 s per group) because the free server rejects bursts; self-host Photon if this gets slow.
+  const found: string[][] = [];
+  for (const g of Object.values(GROUPS)) found.push(await photonNames(lat, lon, g.radiusKm, g.tags));
+  const [hospitals, schools, markets, busStops, roads] = found;
+  return { source: 'osm', radius_m: RADIUS_M, hospitals, schools, markets, busStops, majorRoad: roads[0] ?? null };
+}
+
+// --- Provider 2: Overpass mirrors. Precise (true distance to roads) but often at capacity. ---
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+
+async function viaOverpass(lat: number, lon: number): Promise<GeoContext> {
   const at = `${lat},${lon}`;
   const query = `[out:json][timeout:8];(
     nwr(around:${RADIUS_M},${at})[amenity~"^(hospital|clinic|doctors)$"];
@@ -19,14 +56,14 @@ export async function fetchGeoContext(lat: number, lon: number): Promise<GeoCont
     nwr(around:${RADIUS_M},${at})[highway=bus_stop];
     way(around:60,${at})[highway~"^(motorway|trunk|primary|secondary)$"];
   );out tags 80;`;
-  try {
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
+  for (const url of OVERPASS) {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
       body: 'data=' + encodeURIComponent(query),
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!res.ok) return empty('unavailable');
+      signal: AbortSignal.timeout(7000),
+    }).catch(() => null);
+    if (!res?.ok) continue;
     const { elements = [] } = (await res.json()) as { elements?: { tags?: Record<string, string> }[] };
     const ctx = empty('osm');
     for (const { tags = {} } of elements) {
@@ -39,9 +76,18 @@ export async function fetchGeoContext(lat: number, lon: number): Promise<GeoCont
       else if (h && !ctx.majorRoad) ctx.majorRoad = tags.ref || name || `${h} road`;
     }
     return ctx;
-  } catch {
-    return empty('unavailable');
   }
+  throw new Error('overpass unavailable');
+}
+
+/** Schools, hospitals, markets, bus stops and main roads around a point (OpenStreetMap data). */
+export async function fetchGeoContext(lat: number, lon: number): Promise<GeoContext> {
+  for (const provider of [viaPhoton, viaOverpass]) {
+    try {
+      return await provider(lat, lon);
+    } catch { /* try the next provider */ }
+  }
+  return empty('unavailable');
 }
 
 export interface ReverseGeocode {
