@@ -2,16 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The UI is designed light-only (white cards, gray-900 text). The create-next-app
+   dark-mode override turned inherited text near-white on those white surfaces,
+   so it is removed; color-scheme keeps form controls and scrollbars light too. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: light;
 }
 
 body {
